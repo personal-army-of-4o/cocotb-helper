@@ -13,10 +13,11 @@ class TimeoutException(Exception):
 class Data_interface:
     def __init__(self, back, verbose=False):
         self.back = back
-        self.Write = back.decorator(self.Write2)
+        self.Read = back.decorator(self._read)
+        self.Write = back.decorator(self._write)
         self.v = verbose
 
-    def Write2(self, data, timeout = DEFAULT_TIMEOUT):
+    def _write(self, data, timeout = DEFAULT_TIMEOUT):
         if (not isinstance(data, GeneratorType)) and (not isinstance(data, itertools.chain)):
             raise Exception("generator expected as arg (arg is {})".format(type(data)))
         while True:
@@ -26,26 +27,42 @@ class Data_interface:
                 if (self.v):
                     print("writing ", hex(d))
                 yield from self.back.inactive_edge()
-                yield from self.back.set_data(d)
-                yield from self.back.set_valid(1)
+                try:
+                    yield from self.back.set_data(d)
+                except:
+                    self.back.set_data(d)
+                try:
+                    yield from self.back.set_valid(1)
+                except:
+                    self.back.set_valid(1)
                 yield from self.back.active_edge()
-                while (yield from self.back.get_ack()) != 1:
+                try:
+                    check = (yield from self.back.get_ack())
+                except:
+                    check = self.back.get_ack()
+                while (check) != 1:
                     yield from self.back.active_edge()
+                    try:
+                        check = (yield from self.back.get_ack())
+                    except:
+                        check = self.back.get_ack()
                     cnt += 1
                     if cnt > timeout:
                         raise TimeoutException()
             except StopIteration:
                 yield from self.back.inactive_edge()
-                yield from self.back.set_valid(0)
+                try:
+                    yield from self.back.set_valid(0)
+                except:
+                    self.back.set_valid(0)
                 return
 
-    def Read(self, arg, length = 0, fail_on_mismatch = True, timeout = DEFAULT_TIMEOUT):
-        def exit_ok():
-            yield from self.back.inactive_edge()
-            yield from self.back.set_ack(0)
-            return False
+    def _read(self, arg, length = 0, fail_on_mismatch = True, timeout = DEFAULT_TIMEOUT):
         yield from self.back.inactive_edge()
-        yield from self.back.set_ack(1)
+        try:
+            yield from self.back.set_ack(1)
+        except:
+            self.back.set_ack(1)
         if isinstance(arg, int):
             raise Exception("not tested")
             ret = []
@@ -62,12 +79,23 @@ class Data_interface:
                     cnt = 0
                     data = next(arg)
                     yield from self.back.active_edge()
-                    while (yield from self.back.get_valid()) != 1:
+                    try:
+                        check = (yield from self.back.get_valid())
+                    except:
+                        check = self.back.get_valid()
+                    while (check) != 1:
                         yield from self.back.active_edge()
+                        try:
+                            check = (yield from self.back.get_valid())
+                        except:
+                            check = self.back.get_valid()
                         cnt += 1
                         if cnt > timeout:
                             raise TimeoutException()
-                    tdata = (yield from self.back.get_data())
+                    try:
+                        tdata = (yield from self.back.get_data())
+                    except:
+                        tdata = self.back.get_data()
                     if (self.v):
                         print("got", hex(tdata))
                     if data != tdata:
@@ -76,11 +104,23 @@ class Data_interface:
                             raise DataMismatch()
                         return True
                 except StopIteration:
-                    return (yield from exit_ok())
+                    yield from self.back.inactive_edge()
+                    try:
+                        yield from self.back.set_ack(0)
+                    except:
+                        self.back.set_ack(0)
+                    return False
                 if length > 0:
                     words += 1
                     if words >= length:
-                        return (yield from exit_ok())
+                        if self.v:
+                            print("length limit reached")
+                        yield from self.back.inactive_edge()
+                        try:
+                            yield from self.back.set_ack(0)
+                        except:
+                            self.back.set_ack(0)
+                        return False
         else:
             raise Exception("either generator or int is expected as arg")
 
