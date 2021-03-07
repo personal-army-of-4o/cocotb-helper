@@ -18,15 +18,13 @@ fail = False
 
 #example init for self.ui for helper child classes
 class uut_iface:
-    def __init__(self, uut, verbose):
+    def __init__(self, uut, cfg, verbose = False):
         self.uut = uut
-        self.back_wr = back_wr = Nmigen_backend(None, uut.iValid, uut.iData, uut.oAck)
-        self.di_wr = Data_interface(back_wr, verbose = verbose)
-        self.back_rd = back_rd = Nmigen_backend(None, uut.oValid, uut.oData, uut.iAck)
-        self.di_rd = Data_interface(back_rd, verbose = verbose)
+        for i in cfg:
+            back = Nmigen_backend(cfg[i][0], cfg[i][1], cfg[i][2], cfg[i][3])
+            setattr(self, i, Data_interface(back, verbose = verbose))
 
-
-#depends on self.ui.di_wr and self.ui.di_rd which are Data_interface instances
+#depends on self.ui.w and self.ui.r which are Data_interface instances
 class helper:
     def __init__(self, tm = 1000):
         self.timeout = tm
@@ -49,29 +47,19 @@ class helper:
     def ticks(self, n):
         for i in range(0, n):
             yield Tick()
-    def wr_pkg(self, pkg):
-        yield from self.ui.di_wr.Write(pkg)
+    def wr(self, pkg, ch = "w"):
+        obj = getattr(self.ui, ch)
+        yield from obj.Write(pkg)
+    def rd(self, pkg, len = 0, ch = "r"):
+        obj = getattr(self.ui, ch)
+        yield from obj.Read(pkg, len)
+    def wait(self, s, v):
         cnt = 0
-        while (yield self.ui.uut.oOccupied) == 0:
+        while (yield s) == v:
             yield Tick()
             cnt += 1
             if cnt > self.timeout:
                 raise Exception("timeout")
-    def wait_empty(self):
-        cnt = 0
-        while (yield self.ui.uut.oOccupied) == 1:
-            yield Tick()
-            cnt += 1
-            if cnt > self.timeout:
-                raise Exception("timeout")
-    def wait_sent(self):
-        cnt = 0
-        while (yield self.ui.uut.oDiscarded) == 0:
-            yield Tick()
-            cnt += 1
-            if cnt > self.timeout:
-                raise Exception("timeout")
-        yield from self.wait_empty()
 
 def runtests(debug = False):
     parallel = not debug
