@@ -50,9 +50,9 @@ class helper:
     def wr(self, pkg, ch = "w"):
         obj = getattr(self.ui, ch)
         yield from obj.Write(pkg)
-    def rd(self, pkg, len = 0, ch = "r"):
+    def rd(self, pkg, len = 0, fail_on_mismatch = True, ch = "r"):
         obj = getattr(self.ui, ch)
-        yield from obj.Read(pkg, len)
+        yield from obj.Read(pkg, len, fail_on_mismatch)
     def wait(self, s, v):
         cnt = 0
         while (yield s) == v:
@@ -92,7 +92,7 @@ def runtests(debug = False):
             else:
                 print("running test", si[0])
                 if dump_waveform:
-                    with sim.write_vcd(si[0]+".vcd", si[0]+"test.gtkw", traces=si[1][0].ports()):
+                    with sim.write_vcd(si[0]+".vcd", si[0]+".gtkw", traces=si[1][0].ports()):
                         sim.run()
                 else:
                     sim.run()
