@@ -29,10 +29,10 @@ class helper:
     def __init__(self, tm = 1000):
         self.timeout = tm
     def get_sim_info(self):
-        return [(
+        return [[
             self.__class__.__name__,
             self.get_test_processes()
-        )]
+        ]]
     def gen(self, l, end_type="eop"):
         if end_type:
             l = l-1
@@ -44,7 +44,7 @@ class helper:
         if end_type == "eep":
             pkg = itertools.chain(pkg, iter([257]))
         return pkg
-    def ticks(self, n):
+    def ticks(self, n = 1):
         for i in range(0, n):
             yield Tick()
     def wr(self, pkg, ch = "w"):
@@ -68,7 +68,7 @@ def runtests(debug = False):
         global fail
         try:
             if dump_waveform:
-                with sim.write_vcd(name+".vcd", name+".gtkw", traces=si[1][0].ports()):
+                with sim.write_vcd(name+".vcd", name+".gtkw", traces=si[1][0][0].ports()):
                     sim.run()
             else:
                 sim.run()
@@ -78,13 +78,36 @@ def runtests(debug = False):
             fail |= True
 
     tl = []
-    for tt in tests:
-        for si in tt.get_sim_info():
-            sim = Simulator(si[1][0])
+    def setup_sim(tt):
+        for si in tt:
+            print("setting up sim environment for test", si[0])
+            uut = si[1][0]
+            si[1][0] = (uut, Simulator(si[1][0]))
+            sim = si[1][0][1]
             sim.add_clock(1e-6, domain="sync")
             for sp in si[1][1]:
                 sim.add_sync_process(sp)
 
+    sim_arg_ar = []
+    tmp = []
+    for tt in tests:
+        tmp = []
+        for si in tt.get_sim_info():
+            tmp.append(si)
+        sim_arg_ar.append(tmp)
+    for tt in sim_arg_ar:
+        th = threading.Thread(target = partial(setup_sim, tt))
+        tl.append(th)
+    for i in tl:
+        i.start()
+    for t in tl:
+        t.join()
+
+    tl = []
+    print("running simulations")
+    for tt in sim_arg_ar:
+        for si in tt:
+            sim = si[1][0][1]
             if parallel:
                 th = threading.Thread(target = partial(runtest, si[0], sim))
                 th.start()
@@ -92,7 +115,7 @@ def runtests(debug = False):
             else:
                 print("running test", si[0])
                 if dump_waveform:
-                    with sim.write_vcd(si[0]+".vcd", si[0]+".gtkw", traces=si[1][0].ports()):
+                    with sim.write_vcd(si[0]+".vcd", si[0]+".gtkw", traces=si[1][0][0].ports()):
                         sim.run()
                 else:
                     sim.run()
