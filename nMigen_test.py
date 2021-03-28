@@ -84,9 +84,14 @@ def runtests(debug = False):
             uut = si[1][0]
             si[1][0] = (uut, Simulator(si[1][0]))
             sim = si[1][0][1]
-            sim.add_clock(1e-6, domain="sync")
-            for sp in si[1][1]:
-                sim.add_sync_process(sp)
+            try:
+                sim.add_clock(1e-6, domain="sync")
+                for sp in si[1][1]:
+                    sim.add_sync_process(sp)
+            except:
+                print('failed to set up clock')
+                for sp in si[1][1]:
+                    sim.add_process(sp)
 
     sim_arg_ar = []
     tmp = []
