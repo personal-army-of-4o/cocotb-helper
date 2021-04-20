@@ -102,7 +102,6 @@ class Data_interface:
                         print(hex(data), " neq ", hex(tdata))
                         if fail_on_mismatch:
                             raise DataMismatch()
-                        return True
                 except StopIteration:
                     yield from self.back.inactive_edge()
                     try:
