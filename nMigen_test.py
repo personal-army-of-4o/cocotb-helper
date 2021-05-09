@@ -18,8 +18,7 @@ fail = False
 
 #example init for self.ui for helper child classes
 class uut_iface:
-    def __init__(self, uut, cfg, verbose = False):
-        self.uut = uut
+    def __init__(self, cfg, verbose = False):
         for i in cfg:
             back = Nmigen_backend(cfg[i][0], cfg[i][1], cfg[i][2], cfg[i][3])
             setattr(self, i, Data_interface(back, verbose = verbose))
