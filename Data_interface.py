@@ -99,7 +99,7 @@ class Data_interface:
                     if (self.v):
                         print("got", hex(tdata))
                     if data != tdata:
-                        print(hex(data), " neq ", hex(tdata))
+                        print("expected", hex(data), " got ", hex(tdata))
                         if fail_on_mismatch:
                             raise DataMismatch()
                 except StopIteration:
