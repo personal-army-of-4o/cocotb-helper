@@ -6,6 +6,7 @@ from cocotb.triggers import RisingEdge
 from cocotb.triggers import ClockCycles
 from cocotb.result import TestFailure
 from threading import Thread
+from functools import partial
 
 
 p = []
@@ -26,7 +27,7 @@ async def run_task(t):
 def start(l):
     if isinstance(l, list):
         for i in l:
-                start(i)
+            start(i)
     else:
         for j in l.get_test_processes():
             p.append(cocotb.fork(j()))
@@ -34,13 +35,13 @@ def start(l):
 def stop():
     print("waiting for uart processes")
     for  i in p:
-        i.join()   
+        i.join()
 
-async def run(p, *args, **kwargs):
+async def run(pr, *args, **kwargs):
     for i in args:
         start(i)
     for i in kwargs:
         start(kwargs[i])
-    await run_task(p(*args, **kwargs))
+    await run_task(partial(pr, *args, **kwargs))
     stop()
 
