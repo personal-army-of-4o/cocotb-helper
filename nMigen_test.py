@@ -46,9 +46,9 @@ class helper:
     def ticks(self, n = 1):
         for i in range(0, n):
             yield Tick()
-    def wr(self, pkg, ch = "w"):
+    def wr(self, pkg, len = 0, ch = "w"):
         obj = getattr(self.ui, ch)
-        yield from obj.Write(pkg)
+        yield from obj.Write(pkg, len)
     def rd(self, pkg, len = 0, fail_on_mismatch = True, ch = "r"):
         obj = getattr(self.ui, ch)
         yield from obj.Read(pkg, len, fail_on_mismatch)

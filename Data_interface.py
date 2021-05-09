@@ -17,10 +17,11 @@ class Data_interface:
         self.Write = back.decorator(self._write)
         self.v = verbose
 
-    def _write(self, data, timeout = DEFAULT_TIMEOUT):
+    def _write(self, data, length = -1, timeout = DEFAULT_TIMEOUT):
         if (not isinstance(data, GeneratorType)) and (not isinstance(data, itertools.chain)):
             raise Exception("generator expected as arg (arg is {})".format(type(data)))
-        while True:
+        go_on = True
+        while go_on:
             try:
                 cnt = 0
                 d = next(data)
@@ -49,13 +50,22 @@ class Data_interface:
                     cnt += 1
                     if cnt > timeout:
                         raise TimeoutException()
+                if length > 0:
+                    length -= 1
+                    if length <= 0:
+                        yield from self.back.inactive_edge()
+                        try:
+                            yield from self.back.set_valid(0)
+                        except:
+                            self.back.set_valid(0)
+                        raise StopIteration()
             except StopIteration:
                 yield from self.back.inactive_edge()
                 try:
                     yield from self.back.set_valid(0)
                 except:
                     self.back.set_valid(0)
-                return
+                go_on = False
 
     def _read(self, arg, length = 0, fail_on_mismatch = True, timeout = DEFAULT_TIMEOUT):
         yield from self.back.inactive_edge()
