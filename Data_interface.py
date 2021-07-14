@@ -18,7 +18,9 @@ class Data_interface:
         self.v = verbose
 
     def _write(self, data, length = -1, timeout = DEFAULT_TIMEOUT):
-        if (not isinstance(data, GeneratorType)) and (not isinstance(data, itertools.chain)):
+        if isinstance(data, list):
+            data = iter(data)
+        elif (not isinstance(data, GeneratorType)) and (not isinstance(data, itertools.chain)):
             raise Exception("generator expected as arg (arg is {})".format(type(data)))
         go_on = True
         while go_on:
@@ -82,7 +84,9 @@ class Data_interface:
             yield self.back.inactive_edge()
             self.back.ack = 0
             return ret
-        elif isinstance(arg, GeneratorType) or isinstance(arg, itertools.chain):
+        elif isinstance(arg, GeneratorType) or isinstance(arg, itertools.chain) or isinstance(arg, list):
+            if isinstance(arg, list):
+                arg = iter(arg)
             words = 0
             while True:
                 try:
